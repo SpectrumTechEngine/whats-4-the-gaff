@@ -1,0 +1,19 @@
+{
+  "name": "What's 4 the Gaff",
+  "short_name": "What's 4 the Gaff",
+  "description": "The house shopping list",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#5a3f2c",
+  "theme_color": "#5a3f2c",
+  "icons": [
+    {
+      "src": "whats4thegafficon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
