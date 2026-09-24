@@ -164,6 +164,9 @@
   .item .txt { position: relative; top: var(--drop); max-width: 74%; overflow-wrap: anywhere; }
   .note-dot { display: inline-block; width: .42rem; height: .42rem; margin-left: .3rem; border-radius: 99px; background: var(--accent); vertical-align: .15em; }
   .who-pen { position: relative; top: var(--drop); font-family: var(--hand); font-size: 1.05rem; white-space: nowrap; }
+  .adder { margin-left: auto; align-self: flex-start; height: var(--row); display: inline-flex; align-items: center; gap: .28rem; flex-shrink: 0; max-width: 34%;
+    font-family: var(--ui); font-size: .64rem; font-weight: 700; line-height: 1; color: var(--ac); opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .adder i { width: .5rem; height: .5rem; border-radius: 99px; background: var(--ac); flex-shrink: 0; }
   .del { width: 2.2rem; height: var(--row); flex-shrink: 0; border-radius: 99px; color: rgb(107 90 76 / .5); font-size: 1.1rem; }
   @media (hover: hover) { .del:hover { color: var(--accent); } }
   /* Scratched-out items: a pen stroke through every line of the writing, in the buyer's colour */
@@ -535,7 +538,12 @@ function watchGaffAll(code) {
   const g = S.gaffs[code] = { doc: undefined, members: {}, items: [], unsubs: [] };
   const err = (e) => console.warn("watch", code, e);
   g.unsubs.push(B().watchGaff(code, d => { noticeTrips(code, g.doc, d); g.doc = d; tidyMyTrip(code); render(); }, err));
-  g.unsubs.push(B().watchMembers(code, m => { g.members = m; fixupAfterJoin(code); render(); }, err));
+  g.unsubs.push(B().watchMembers(code, m => {
+    g.members = m;
+    if (m[S.uid]) g.seenMe = true;
+    else if (g.seenMe) return removedFrom(code);   // someone took me off this list
+    fixupAfterJoin(code); render();
+  }, e => { if (g.seenMe && e && e.code === "permission-denied") removedFrom(code); else err(e); }));
   g.unsubs.push(B().watchItems(code, items => {
     const cut = Date.now() - DAY;
     g.items = items.filter(i => {
@@ -547,6 +555,16 @@ function watchGaffAll(code) {
     }).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
     render();
   }, err));
+}
+
+// Someone in the house removed me from this gaff
+function removedFrom(code) {
+  const name = G(code)?.doc?.name || "a gaff";
+  dropGaff(code);
+  B().removeGaffFromProfile(S.uid, code).catch(() => {});
+  if (S.view.code === code) S.view = { page: "home" };
+  render();
+  toast(`You've been taken off ${name}. If that's a mistake, ask for a new invite.`, null, 8000);
 }
 
 // Let people know when someone else heads to / arrives at / finishes a shop
@@ -875,6 +893,15 @@ function gaffScreen() {
   }
 
   // The list
+  // Who put it on the list: a tiny name with a dot in their pen colour,
+  // so two milks from two people are clearly two different milks
+  function adderTag(it) {
+    const m = (it.createdBy && g.members[it.createdBy]) || null;
+    const name = (m && m.display) || it.addedByName;
+    if (!name) return "";
+    const hex = penHex((m && m.pen) || it.addedByPen || "navy");
+    return `<span class="adder" style="--ac:${hex}"><i aria-hidden="true"></i>${esc(name)}</span>`;
+  }
   function rows(items) {
     return items.map(it => {
       const bought = !!it.boughtAt;
@@ -882,7 +909,7 @@ function gaffScreen() {
       return `<div class="item ${bought ? "bought" : ""} ${v.selected === it.id ? "sel" : ""}">
         <button type="button" class="line" data-a="tap" data-id="${it.id}">
           <span class="txt"><span class="words" ${bought ? `style="--pc:${col}"` : ""}>${esc(it.text)}</span>${it.note ? `<span class="note-dot" title="Has a note"></span>` : ""}</span>
-          ${bought && it.boughtByName ? `<span class="who-pen" style="color:${col}">${esc(it.boughtByName)}</span>` : ""}
+          ${bought && it.boughtByName ? `<span class="who-pen" style="color:${col}">${esc(it.boughtByName)}</span>` : adderTag(it)}
         </button>
         <button type="button" class="del" data-a="del" data-id="${it.id}" aria-label="Delete ${esc(it.text)}">×</button>
       </div>`;
@@ -962,6 +989,18 @@ function gaffScreen() {
           <button class="btn primary" type="submit" style="width:auto">Add</button>
         </form>
       </div>
+      ${(() => {
+        const people = Object.entries(g.members).filter(([id]) => id !== S.uid);
+        if (!people.length) return "";
+        return `<div class="divider">
+        <p class="hand" style="font-size:1.5rem;font-weight:600;margin:0 0 .3rem">People</p>
+        <p class="tiny">If someone moves out, you can take them off this list.</p>
+        ${people.map(([id, m]) => `<div class="shop-row">
+          <span class="hand" style="color:${(PENS.find(p => p.id === m.pen) || {}).hex || "inherit"}">${esc(m.display || "Someone")}</span>
+          <button type="button" class="textlink" data-a="rm-person" data-uid="${esc(id)}" style="color:var(--accent);opacity:.75">Remove</button>
+        </div>`).join("")}
+      </div>`;
+      })()}
       <button class="btn ghost" data-a="leave" style="margin-top:1.2rem;color:var(--accent)">Leave this gaff</button>
       ${steLogo("ste-mini")}`);
   }
@@ -1140,6 +1179,21 @@ const A = {
     g.items.filter(i => i.storeId === s.id).forEach(i => write(B().updateItem(code, i.id, { storeId: null })));
     write(B().updateGaff(code, { stores: stores.filter(x => x.id !== s.id) }));
   },
+  "rm-person": async (el) => {
+    const code = S.view.code, g = G(code), uid = el.dataset.uid;
+    const m = g?.members?.[uid];
+    if (!m || uid === S.uid) return;
+    const who = m.display || "this person";
+    if (!(await ask(`Remove ${who}?`, `${who} will stop seeing ${g.doc.name}. Anything they added stays on the list.`, "Remove", true))) return;
+    try {
+      if (g.doc?.trips?.[uid]) await withTimeout(B().setTrip(code, uid, null), 6000).catch(() => {});
+      await withTimeout(B().removeMember(code, uid), 8000);
+      toast(`${who} has been removed.`, null, 4000);
+    } catch (e) {
+      console.warn(e);
+      toast(`Couldn't remove ${who}. Check your connection and try again.`, null, 6000);
+    }
+  },
   leave: async () => {
     const code = S.view.code, name = G(code).doc.name;
     if (!(await ask(`Leave ${name}?`, "You'll stop seeing this list. You can rejoin with the invite link.", "Leave gaff", true))) return;
@@ -1244,8 +1298,10 @@ const F = {
     const noteBox = $("#note-new");
     const note = S.view.selected ? (S.view.addNote || "") : ((noteBox && noteBox.value) || S.view.addNote || "").trim();
     const id = newId();
+    const adder = myMember(code) || { display: me().name, pen: me().pen };
     write(B().setItem(code, id, {
       text, note, storeId: S.view.addStore || null, createdBy: S.uid, createdAt: Date.now(),
+      addedByName: adder.display || "", addedByPen: adder.pen || "",
       boughtAt: null, boughtBy: null, boughtByName: null, boughtByColor: null,
     }));
     input.value = "";
