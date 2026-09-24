@@ -9,9 +9,9 @@
 <!-- The picture and title WhatsApp shows under a link to the app -->
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="What's 4 the Gaff" />
-<meta property="og:title" content="What's 4 the Gaff: last orders!" />
-<meta property="og:description" content="Our house shopping list. Tap to see what's needed and add your bits." />
-<meta property="og:image" content="https://spectrumtechengine.github.io/whats-4-the-gaff/lastorders.jpg" />
+<meta property="og:title" content="What's 4 the Gaff: the house shopping list" />
+<meta property="og:description" content="One shared shopping list for everyone in the gaff. Add your bits, scratch them off, and see who's heading to the shop." />
+<meta property="og:image" content="https://spectrumtechengine.github.io/whats-4-the-gaff/whats4thegaff.jpg" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
@@ -513,7 +513,12 @@ function openWhatsApp(text) {
   if (S.live) { location.href = url; return; }
   toast("WhatsApp can't open from this preview. It will work once the app is on GitHub.", null, 6000);
 }
-function inviteLink(code) { return location.origin + location.pathname + "?join=" + code; }
+// Links point at small helper pages so WhatsApp shows the right picture:
+// join.html shows "Come Join My Gaff", lastorders.html shows "Last Orders".
+// Both pages send the person straight on to the app.
+function appFolder() { return location.origin + location.pathname.replace(/[^/]*$/, ""); }
+function inviteLink(code) { return appFolder() + "join.html?join=" + code; }
+function runLink(code) { return appFolder() + "lastorders.html?join=" + code; }
 
 /* ---------------- Subscriptions ---------------- */
 function syncSubs() {
@@ -1109,7 +1114,7 @@ const A = {
     const mem = myMember(code) || { display: me().name, pen: me().pen };
     // WhatsApp has to open straight from the tap, or the phone blocks it
     if (waToo) {
-      const text = `🔔 Last orders! I'm heading to ${shop.name}. Add anything you need to the ${d.name} list: ${inviteLink(code)}`;
+      const text = `🔔 Last orders! I'm heading to ${shop.name}. Add anything you need to the ${d.name} list: ${runLink(code)}`;
       shareOrders(mem.display, shop.name, text);
     }
     write(B().setTrip(code, S.uid, { name: mem.display, pen: mem.pen, shopId: shop.id, shopName: shop.name, stage: "heading", at: Date.now() }));
