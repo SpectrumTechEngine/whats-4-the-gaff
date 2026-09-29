@@ -1,0 +1,10 @@
+{
+  "appId": "com.thespectrumtechengine.whats4thegaff",
+  "appName": "What's 4 the Gaff",
+  "webDir": "www",
+  "backgroundColor": "#5a3f2c",
+  "server": {
+    "url": "https://thespectrumtechengine.com/whats-4-the-gaff/",
+    "errorPath": "index.html"
+  }
+}

@@ -1379,7 +1379,7 @@ async function boot() {
   render();
   const q = new URLSearchParams(location.search);
   // The real app only connects on its own web address; anywhere else (like Claude's preview) runs as a preview copy
-  const liveHost = /(^|\.)github\.io$|(^|\.)spectrumtechengine\.com$/i.test(location.hostname) || q.has("live");
+  const liveHost = /(^|\.)github\.io$|(^|\.)(the)?spectrumtechengine\.com$/i.test(location.hostname) || q.has("live");
   const previewHost = !liveHost;
   S.live = liveHost;
   if (!q.has("demo") && liveHost && window.firebase) {

@@ -1,0 +1,13 @@
+{
+  "name": "whats-4-the-gaff-android",
+  "private": true,
+  "description": "Builds the Android APK for What's 4 the Gaff. See README.md in this folder.",
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2"
+  },
+  "devDependencies": {
+    "@capacitor/assets": "^3.0.5"
+  }
+}
