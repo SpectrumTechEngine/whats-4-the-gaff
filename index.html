@@ -11,7 +11,10 @@
 <meta property="og:site_name" content="What's 4 the Gaff" />
 <meta property="og:title" content="What's 4 the Gaff: the house shopping list" />
 <meta property="og:description" content="One shared shopping list for everyone in the gaff. Add your bits, scratch them off, and see who's heading to the shop." />
-<meta property="og:image" content="https://spectrumtechengine.github.io/whats-4-the-gaff/whats4thegaff.jpg" />
+<meta property="og:url" content="https://thespectrumtechengine.com/whats-4-the-gaff/" />
+<meta property="og:image" content="https://thespectrumtechengine.com/whats-4-the-gaff/whats4thegaff.jpg" />
+<meta property="og:image:secure_url" content="https://thespectrumtechengine.com/whats-4-the-gaff/whats4thegaff.jpg" />
+<meta property="og:image:type" content="image/jpeg" />
 <meta property="og:image:width" content="1200" />
 <meta property="og:image:height" content="630" />
 <meta name="twitter:card" content="summary_large_image" />
@@ -1381,7 +1384,7 @@ async function boot() {
   render();
   const q = new URLSearchParams(location.search);
   // The real app only connects on its own web address; anywhere else (like Claude's preview) runs as a preview copy
-  const liveHost = /(^|\.)github\.io$|(^|\.)(the)?spectrumtechengine\.com$/i.test(location.hostname) || q.has("live");
+  const liveHost = /(^|\.)github\.io$|^(www\.)?(the)?spectrumtechengine\.com$/i.test(location.hostname) || q.has("live");
   const previewHost = !liveHost;
   S.live = liveHost;
   if (!q.has("demo") && liveHost && window.firebase) {
