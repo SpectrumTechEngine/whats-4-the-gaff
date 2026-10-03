@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(code) {
+      return signedIn() && exists(
+        /databases/$(database)/documents/gaffs/$(code)/members/$(request.auth.uid)
+      );
+    }
+
+    // The owner: a device unlocked with the owner code (see /admins below)
+    function isAdmin() {
+      return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+
+    // Each phone's own saved settings
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /gaffs/{code} {
+      // You can look up a gaff only if you know its code; the owner can see the full list of houses
+      allow get: if signedIn();
+      allow list: if isAdmin();
+      allow create: if signedIn()
+        && request.resource.data.createdBy == request.auth.uid;
+      allow update: if isMember(code) || isAdmin();
+      allow delete: if isAdmin();
+
+      // The people in the gaff (anyone in the house can remove someone, as the app offers)
+      match /members/{uid} {
+        allow get: if signedIn() && (request.auth.uid == uid || isMember(code) || isAdmin());
+        allow list: if isMember(code) || isAdmin();
+        allow create, update: if signedIn()
+          && request.auth.uid == uid
+          && existsAfter(/databases/$(database)/documents/gaffs/$(code));
+        allow delete: if signedIn() && (request.auth.uid == uid || isMember(code) || isAdmin());
+      }
+
+      // The shopping list itself. The owner never reads it; entries can only be
+      // erased when the owner is deleting the whole house on request.
+      match /items/{itemId} {
+        allow read, write: if isMember(code);
+        allow list, delete: if isAdmin()
+          && get(/databases/$(database)/documents/gaffs/$(code)).data.get('closing', false) == true;
+      }
+
+      // Pop-ups for one house
+      match /notices/{noticeId} {
+        allow read: if isMember(code) || isAdmin();
+        allow write: if isAdmin();
+      }
+    }
+
+    // Pop-ups for everyone
+    match /notices/{noticeId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    // The owner's list of every pop-up sent
+    match /{path=**}/notices/{noticeId} {
+      allow read: if isAdmin();
+    }
+
+    // Maintenance banner and feature switches: everyone reads, the owner writes.
+    // config/admin holds the owner code's fingerprint and is never readable.
+    match /config/{name} {
+      allow read: if signedIn() && name != 'admin';
+      allow write: if isAdmin() && name != 'admin';
+    }
+
+    // Unlocking owner tools: a device can only add itself, and only with the right code
+    match /admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow create: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['key', 'at'])
+        && request.resource.data.key == get(/databases/$(database)/documents/config/admin).data.keyHash;
+      allow delete: if signedIn() && request.auth.uid == uid;
+    }
+
+    // Daily numbers (items added and ticked, which houses were active): everyone adds, the owner reads
+    match /stats/{day} {
+      allow read: if isAdmin();
+      allow create, update: if signedIn()
+        && request.resource.data.keys().hasOnly(['added', 'ticked', 'gaffs']);
+    }
+  }
+}

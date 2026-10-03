@@ -1104,6 +1104,7 @@ const A = {
       write(B().updateItem(code, id, { boughtAt: null, boughtBy: null, boughtByName: null, boughtByColor: null }));
     } else {
       write(B().updateItem(code, id, { boughtAt: Date.now(), boughtBy: S.uid, boughtByName: mem.display, boughtByColor: mem.pen }));
+      window.gaffStats?.ticked(code);
       autoTrip(code, id);
     }
   },
@@ -1304,6 +1305,7 @@ const F = {
       addedByName: adder.display || "", addedByPen: adder.pen || "",
       boughtAt: null, boughtBy: null, boughtByName: null, boughtByColor: null,
     }));
+    window.gaffStats?.added(code);
     input.value = "";
     if (noteBox) noteBox.value = "";
     S.view.addNote = ""; S.view.addStore = null; S.view.selected = null;
@@ -1412,5 +1414,6 @@ async function boot() {
 }
 boot();
 </script>
+<script src="admin.js"></script>
 </body>
 </html>
