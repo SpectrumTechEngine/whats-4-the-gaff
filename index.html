@@ -20,6 +20,8 @@
 <meta name="twitter:card" content="summary_large_image" />
 <!-- Home-screen icon and app settings (these files sit next to index.html) -->
 <link rel="manifest" href="manifest.webmanifest" />
+<!-- Usage numbers shared by every Spectrum Tech Engine app. The badge keeps opening this app's own owner tools (admin.js), which link to these. -->
+<script src="https://thespectrumtechengine.com/ste-owner.js" data-app="whats-4-the-gaff" data-badge="off" defer></script>
 <link rel="icon" type="image/png" href="whats4thegafficon.png" />
 <link rel="apple-touch-icon" href="whats4thegafficon.png" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -480,8 +482,12 @@ function dataUrlToFile(url, name) {
   for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
   return new File([arr], name, { type });
 }
+// Usage numbers for the owner (ste-owner.js on the website): counts only, never what's on a list
+function ste(f, ...a) { try { if (window.STE && window.STE[f]) window.STE[f](...a); } catch (e) {} }
+
 // Sends the Last Orders picture plus the message through the phone's share menu (pick WhatsApp)
 function shareOrders(name, shop, text) {
+  ste("track", "share"); ste("detail", "last-orders-shared");
   let url = null, file = null;
   try { url = makeOrdersCard(name, shop); file = dataUrlToFile(url, "last-orders.jpg"); } catch (e) { console.warn(e); }
   const data = file ? { files: [file], text } : null;
@@ -820,6 +826,7 @@ function homeScreen() {
       <label class="field"><span>Your name</span><input class="inp" id="y-name" name="name" maxlength="24" value="${esc(u.name)}" /></label>
       ${penPicker(v.pen || u.pen)}
       <p class="tiny" style="margin-top:.8rem">This is used when you join new gaffs. Change your name in a gaff from its settings.</p>
+      <p class="tiny" style="margin-top:.5rem">Privacy: your lists are only seen by the people in your gaff. To help improve the app it counts a few anonymous things, like how often it's opened and how many shop runs start. Numbers only, never your name or what's on your list.</p>
       <button class="btn primary" type="submit" style="margin-top:1rem">Save</button></form>`);
 
   return {
@@ -1133,11 +1140,13 @@ const A = {
   },
 
   "invite-wa": () => {
+    ste("track", "share"); ste("detail", "invite-sent");
     const d = G(S.view.code).doc;
     const text = `Join ${d.name} on What's 4 the Gaff, our house shopping list 🛒 ${inviteLink(S.view.code)}`;
     openWhatsApp(text);
   },
   "invite-share": async () => {
+    ste("track", "share"); ste("detail", "invite-sent");
     const d = G(S.view.code).doc;
     try { await navigator.share({ title: "What's 4 the Gaff", text: `Join ${d.name} on What's 4 the Gaff, our house shopping list 🛒`, url: inviteLink(S.view.code) }); } catch (e) {}
   },
@@ -1161,6 +1170,7 @@ const A = {
       shareOrders(mem.display, shop.name, text);
     }
     write(B().setTrip(code, S.uid, { name: mem.display, pen: mem.pen, shopId: shop.id, shopName: shop.name, stage: "heading", at: Date.now() }));
+    ste("detail", "shop-run-started");
     closeModal();
   },
   "trip-stage": (el) => setTripStage(S.view.code, el.dataset.stage),
@@ -1230,6 +1240,7 @@ function setTripStage(code, stage) {
 async function joinGaff(code) {
   const d = await withTimeout(B().getGaff(code), 12000, "offline");
   if (!d) throw new Error("No gaff with that code");
+  ste("detail", "gaff-joined");
   const u = me();
   S.fixups.add(code);
   await withTimeout(B().setMember(code, S.uid, { display: u.name, pen: u.pen, joinedAt: Date.now() }), 12000, "offline");
@@ -1259,6 +1270,7 @@ const F = {
       const gaff = { name, code, createdBy: S.uid, createdAt: Date.now(), stores: PRESETS.map(p => ({ ...p, custom: false })), trips: {} };
       await withTimeout(B().createGaff(code, gaff, S.uid, { display: u.name, pen: u.pen, joinedAt: Date.now() }), 12000, "offline");
       await withTimeout(B().addGaffToProfile(S.uid, code), 12000, "offline");
+      ste("detail", "gaff-created");
       S.profile.gaffs = [...new Set([...(S.profile.gaffs || []), code])];
       syncSubs();
       openGaff(code);
@@ -1295,6 +1307,7 @@ const F = {
     closeModal();
   },
   add: (form) => {
+    ste("track", "play");
     const code = S.view.code;
     const input = $("#draft");
     const text = input.value.trim().replace(/\s+/g, " ");

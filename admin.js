@@ -230,11 +230,16 @@
       <div class="adm-top"><h2>Owner tools</h2><button class="adm-x" type="button" aria-label="Close" data-close>&times;</button></div>
       <div class="adm-tabs" role="tablist">${TABS.map(([k, l]) => `<button type="button" role="tab" data-tab="${k}">${l}</button>`).join("")}</div>
       <div data-body></div>
-      <div class="adm-row" style="margin-top:1.2rem"><button class="adm-btn" type="button" data-lock>Lock owner tools on this device</button></div>
+      <div class="adm-row" style="margin-top:1.2rem"><button class="adm-btn go" type="button" data-ste>All-app numbers</button><button class="adm-btn" type="button" data-lock>Lock owner tools on this device</button></div>
       <p class="adm-msg" data-msg aria-live="polite"></p>`, "adm-card wide");
     panel.querySelector("[data-close]").onclick = closeAdmin;
     panel.addEventListener("click", e => { if (e.target === panel) closeAdmin(); });
     panel.querySelectorAll("[data-tab]").forEach(b => b.onclick = () => { tab = b.dataset.tab; showTab(); });
+    // the numbers shared by every Spectrum Tech Engine app (ste-owner.js), unlocked with the STE owner code
+    panel.querySelector("[data-ste]").onclick = () => {
+      if (window.STE && window.STE.openOwner) { closeAdmin(); window.STE.openOwner(); }
+      else msg("The shared numbers haven't loaded yet. Try again in a moment.");
+    };
     panel.querySelector("[data-lock]").onclick = async () => {
       try { await fs().doc("admins/" + S.uid).delete(); } catch (e) {}
       local.set("on", false); closeAdmin();
