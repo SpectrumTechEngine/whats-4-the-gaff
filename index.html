@@ -1432,5 +1432,7 @@ async function boot() {
 boot();
 </script>
 <script src="admin.js"></script>
+<!-- Lets the app open offline once it has been visited, and be installed as an app -->
+<script>if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});</script>
 </body>
 </html>
